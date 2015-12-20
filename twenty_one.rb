@@ -1,13 +1,3 @@
-# Deal card deck consisting of 4 suits and 13 values
-# Deal the player and dealer two cards
-# Only show one of the dealers cards
-# Player chooses to hit or stay
-# Hit or stay? Until 21 or bust
-# Dealer reveals second card
-# Hit or stay? Until less than 17 or bust
-# Compare the total value of each hand
-require 'pry'
-
 SUIT  = %w(H D C S)
 CARDS = %w(1 2 3 4 5 6 7 8 9 J Q K A)
 
