@@ -6,9 +6,10 @@
 # Dealer reveals second card
 # Hit or stay? Until less than 17 or bust
 # Compare the total value of each hand
+require 'pry'
 
-SUIT  = ['H', 'D', 'C', 'S']
-CARDS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
+SUIT  = %w(H D C S)
+CARDS = %w(1 2 3 4 5 6 7 8 9 J Q K A)
 
 def initialize_deck
   deck = []
@@ -59,23 +60,131 @@ def suit_card(card)
   end
 end
 
-def cards_in_hand(hand)
+def cards_in_hand(hand, conceal_hand)
   cards = []
   hand.each do |card|
     cards << "#{suit_card(card[1])} of #{card_suit(card[0])}"
+    if conceal_hand
+      cards << "one hidden card"
+      return cards
+    end
   end
   cards
 end
 
-def hand_msg(hand)
-  cards = cards_in_hand(hand)
-  cards[-1] = "and #{cards.last}" if cards.size > 1
-  cards.join(', ')
+def construct_hand(index, cards)
+  if index < (cards.count - 2)
+    cards[index] + ', '
+  elsif index < (cards.count - 1)
+    cards[index]
+  else
+    ' and ' + cards[index]
+  end
 end
 
-deck = initialize_deck
-player_hand = []
-computer_hand = []
+def display_hand(hand, player, conceal_hand = false)
+  string = ''
+  cards = cards_in_hand(hand, conceal_hand)
+  cards.each_index do |index|
+    string += construct_hand(index, cards)
+  end
+  if conceal_hand == false
+    "The #{player} has a total of #{calculate_hand(hand)}; #{string}"
+  else
+    "The #{player} has: #{string}"
+  end
+end
 
-deal_initial_hand(deck, player_hand, computer_hand)
-p hand_msg(player_hand)
+def calculate_hand(hand)
+  total = 0
+
+  hand.each do |card|
+    if card[1].to_i == 0
+      total += 10
+    elsif card[1] == 'A'
+      total += 11
+    else
+      total += card[1].to_i
+    end
+  end
+
+  hand.count { |card| card[1] == 'A' }.times do
+    total -= 10 if total > 21
+  end
+
+  total
+end
+
+def busted?(hand)
+  calculate_hand(hand) > 21
+end
+
+def twenty_one?(hand)
+  calculate_hand(hand) == 21
+end
+
+def display_game_state(player_hand, dealer_hand, conceal_hand = true)
+  system 'clear'
+  puts display_hand(dealer_hand, 'dealer', conceal_hand)
+  puts display_hand(player_hand, 'player')
+end
+
+def hit_or_stay(deck, player_hand, dealer_hand)
+  loop do
+    display_game_state(player_hand, dealer_hand)
+    puts 'Would you like to hit or stay? [h] or [s]'
+    break if gets.chomp.downcase.start_with?('s')
+    player_hand << deal_card!(deck)
+    break if busted?(player_hand) || twenty_one?(player_hand)
+  end
+end
+
+def dealers_round(deck, player_hand, dealer_hand)
+  loop do
+    display_game_state(player_hand, dealer_hand, false)
+    break if busted?(dealer_hand) || twenty_one?(dealer_hand)
+    calculate_hand(dealer_hand) < 17 ? dealer_hand << deal_card!(deck) : break
+    sleep(1)
+  end
+end
+
+def play_again?
+  puts ''
+  puts 'Would you like to play again? [y] or [n]'
+  gets.chomp.downcase.start_with?('y')
+end
+
+loop do
+  deck = initialize_deck
+  player_hand = []
+  dealer_hand = []
+
+  deal_initial_hand(deck, player_hand, dealer_hand)
+
+  hit_or_stay(deck, player_hand, dealer_hand)
+
+  display_game_state(player_hand, dealer_hand, false)
+
+  if twenty_one?(player_hand)
+    puts 'Player hit 21! Player won!'
+  elsif busted?(player_hand)
+    puts 'Player bust! Dealer wins!'
+  else
+    dealers_round(deck, player_hand, dealer_hand)
+    if twenty_one?(dealer_hand)
+      puts 'Dealer hit 21! Dealer won!'
+    elsif busted?(dealer_hand)
+      puts 'Dealer bust! Player wins!'
+    else
+      if calculate_hand(player_hand) > calculate_hand(dealer_hand)
+        puts 'Player wins!'
+      else
+        puts 'Dealer wins!'
+      end
+    end
+  end
+
+  break unless play_again?
+end
+
+puts 'Thanks for playing!'
